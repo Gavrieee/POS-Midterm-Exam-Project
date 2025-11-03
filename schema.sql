@@ -1,0 +1,57 @@
+-- users table
+CREATE TABLE users (
+id INT AUTO_INCREMENT PRIMARY KEY,
+username VARCHAR(100) NOT NULL UNIQUE,
+password_hash VARCHAR(255) NOT NULL,
+full_name VARCHAR(150),
+role ENUM('superadmin','admin') NOT NULL DEFAULT 'admin',
+suspended TINYINT(1) NOT NULL DEFAULT 0,
+date_added DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+last_login DATETIME NULL
+);
+
+
+-- products table
+CREATE TABLE products (
+id INT AUTO_INCREMENT PRIMARY KEY,
+name VARCHAR(200) NOT NULL,
+price DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+image_path VARCHAR(255) DEFAULT NULL,
+added_by INT,
+date_added DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+FOREIGN KEY (added_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+
+-- orders table (summary)
+CREATE TABLE orders (
+id INT AUTO_INCREMENT PRIMARY KEY,
+total_amount DECIMAL(12,2) NOT NULL,
+served_by INT NOT NULL,
+date_added DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+notes TEXT DEFAULT NULL,
+FOREIGN KEY (served_by) REFERENCES users(id)
+);
+
+
+-- order_items table (line items)
+CREATE TABLE order_items (
+id INT AUTO_INCREMENT PRIMARY KEY,
+order_id INT NOT NULL,
+product_id INT NOT NULL,
+qty INT NOT NULL DEFAULT 1,
+price_at_sale DECIMAL(12,2) NOT NULL,
+subtotal DECIMAL(12,2) NOT NULL,
+FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT
+);
+
+
+-- audit_logs (optional)
+CREATE TABLE audit_logs (
+id INT AUTO_INCREMENT PRIMARY KEY,
+user_id INT,
+action VARCHAR(255),
+context TEXT,
+date_added DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

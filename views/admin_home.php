@@ -29,7 +29,7 @@ $pageTitle = 'POS System - Admin Dashboard';
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Products</h5>
+                        <h5 class="mb-0">Menu</h5>
                         <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal"
                             data-bs-target="#addProductModal">
                             Add Product
@@ -47,7 +47,7 @@ $pageTitle = 'POS System - Admin Dashboard';
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0">Current Order</h5>
+                        <h5 class="mb-0">Ordered Items</h5>
                     </div>
                     <div class="card-body">
                         <div id="currentOrder">
@@ -75,11 +75,6 @@ $pageTitle = 'POS System - Admin Dashboard';
                             <div class="mt-3">
                                 <textarea id="orderNotes" class="form-control mb-2"
                                     placeholder="Order notes..."></textarea>
-                                <div class="input-group mb-2">
-                                    <span class="input-group-text">₱</span>
-                                    <input type="number" id="amountTendered" class="form-control" step="0.01" min="0"
-                                        placeholder="Amount tendered">
-                                </div>
                                 <button id="submitOrder" class="btn btn-success w-100">Complete Order</button>
                             </div>
                         </div>
@@ -168,20 +163,39 @@ $pageTitle = 'POS System - Admin Dashboard';
         </div>
     </div>
 
+    <div class="modal fade" id="pdfPreviewModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header g-4">
+                    <h5 class="modal-title">Transaction Report Preview</h5>
+                    <div class="d-flex gap-4">
+                        <button type="button" class="btn btn-secondary" onclick="window.print()">Print</button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                </div>
+                <div class="modal-body bg-light">
+                    <div id="pdfPreviewContent" class="bg-white p-4" style="min-height: 70vh">
+                        <!-- Filled dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-    const API = window.location.pathname.includes('/views/') ? '../public/api.php' : 'api.php';
-    const IMG_BASE = window.location.pathname.includes('/views/') ? '../public/' : '';
-    // Load products on page load
-    loadProducts();
-    loadTransactions();
+        const API = window.location.pathname.includes('/views/') ? '../public/api.php' : 'api.php';
+        const IMG_BASE = window.location.pathname.includes('/views/') ? '../public/' : '';
+        // Load products on page load
+        loadProducts();
+        loadTransactions();
 
-    function loadProducts() {
-        fetch(`${API}?action=get_products`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    const productsHtml = data.products.map(p => `
+        function loadProducts() {
+            fetch(`${API}?action=get_products`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const productsHtml = data.products.map(p => `
     <div class="col-md-4">
             <div class="card h-100">
               ${p.image_path ? `<img src="${IMG_BASE}${p.image_path}" class="card-img-top" alt="${p.name}">` : ''}
@@ -196,23 +210,23 @@ $pageTitle = 'POS System - Admin Dashboard';
             </div>
           </div>
 `).join('');
-                    document.getElementById('productsList').innerHTML = productsHtml;
-                }
-            });
-    }
+                        document.getElementById('productsList').innerHTML = productsHtml;
+                    }
+                });
+        }
 
-    function loadTransactions() {
-        const startDate = document.getElementById('startDate').value || new Date().toISOString().split('T')[0];
-        const endDate = document.getElementById('endDate').value || new Date().toISOString().split('T')[0];
+        function loadTransactions() {
+            const startDate = document.getElementById('startDate').value || new Date().toISOString().split('T')[0];
+            const endDate = document.getElementById('endDate').value || new Date().toISOString().split('T')[0];
 
-        fetch(
+            fetch(
                 `${API}?action=get_order_report&start_date=${encodeURIComponent(startDate + ' 00:00:00')}&end_date=${encodeURIComponent(endDate + ' 23:59:59')}`
             )
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    const tbody = document.querySelector('#transactionsTable tbody');
-                    tbody.innerHTML = data.transactions.map(t => `
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const tbody = document.querySelector('#transactionsTable tbody');
+                        tbody.innerHTML = data.transactions.map(t => `
                             <tr>
                                 <td>${t.id}</td>
                                 <td>${new Date(t.date_added).toLocaleString()}</td>
@@ -221,39 +235,39 @@ $pageTitle = 'POS System - Admin Dashboard';
                                 <td>${t.notes || ''}</td>
                             </tr>
                         `).join('');
-                    document.getElementById('reportTotal').textContent = `₱${parseFloat(data.total).toFixed(2)}`;
-                }
-            });
-    }
-
-    // Current order management
-    let currentOrder = [];
-
-    function addToOrder(productId, name, price) {
-        const existing = currentOrder.find(item => item.product_id === productId);
-        if (existing) {
-            existing.qty++;
-            existing.subtotal = existing.qty * existing.price;
-        } else {
-            currentOrder.push({
-                product_id: productId,
-                name: name,
-                price: price,
-                qty: 1,
-                subtotal: price
-            });
+                        document.getElementById('reportTotal').textContent = `₱${parseFloat(data.total).toFixed(2)}`;
+                    }
+                });
         }
-        updateOrderDisplay();
-    }
 
-    function removeFromOrder(index) {
-        currentOrder.splice(index, 1);
-        updateOrderDisplay();
-    }
+        // Current order management
+        let currentOrder = [];
 
-    function updateOrderDisplay() {
-        const tbody = document.getElementById('orderItems');
-        tbody.innerHTML = currentOrder.map((item, index) => `
+        function addToOrder(productId, name, price) {
+            const existing = currentOrder.find(item => item.product_id === productId);
+            if (existing) {
+                existing.qty++;
+                existing.subtotal = existing.qty * existing.price;
+            } else {
+                currentOrder.push({
+                    product_id: productId,
+                    name: name,
+                    price: price,
+                    qty: 1,
+                    subtotal: price
+                });
+            }
+            updateOrderDisplay();
+        }
+
+        function removeFromOrder(index) {
+            currentOrder.splice(index, 1);
+            updateOrderDisplay();
+        }
+
+        function updateOrderDisplay() {
+            const tbody = document.getElementById('orderItems');
+            tbody.innerHTML = currentOrder.map((item, index) => `
                 <tr>
                     <td>${item.name}</td>
                     <td>
@@ -268,110 +282,143 @@ $pageTitle = 'POS System - Admin Dashboard';
                 </tr>
             `).join('');
 
-        const total = currentOrder.reduce((sum, item) => sum + item.subtotal, 0);
-        document.getElementById('orderTotal').textContent = `₱${total.toFixed(2)}`;
-    }
+            const total = currentOrder.reduce((sum, item) => sum + item.subtotal, 0);
+            document.getElementById('orderTotal').textContent = `₱${total.toFixed(2)}`;
+        }
 
-    function updateQuantity(index, qty) {
-        qty = parseInt(qty);
-        if (qty < 1) qty = 1;
-        currentOrder[index].qty = qty;
-        currentOrder[index].subtotal = qty * currentOrder[index].price;
-        updateOrderDisplay();
-    }
+        function updateQuantity(index, qty) {
+            qty = parseInt(qty);
+            if (qty < 1) qty = 1;
+            currentOrder[index].qty = qty;
+            currentOrder[index].subtotal = qty * currentOrder[index].price;
+            updateOrderDisplay();
+        }
 
-    // Event Listeners
-    document.getElementById('saveProduct').addEventListener('click', function() {
-        const form = document.getElementById('addProductForm');
-        const formData = new FormData(form);
+        // Event Listeners
+        document.getElementById('saveProduct').addEventListener('click', function () {
+            const form = document.getElementById('addProductForm');
+            const formData = new FormData(form);
 
-        fetch(`${API}?action=add_product`, {
+            fetch(`${API}?action=add_product`, {
                 method: 'POST',
                 body: formData
             })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    form.reset();
-                    bootstrap.Modal.getInstance(document.getElementById('addProductModal')).hide();
-                    loadProducts();
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: data.message || 'Error adding product'
-                    });
-                }
-            });
-    });
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        form.reset();
+                        bootstrap.Modal.getInstance(document.getElementById('addProductModal')).hide();
+                        loadProducts();
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: data.message || 'Error adding product'
+                        });
+                    }
+                });
+        });
 
-    document.getElementById('submitOrder').addEventListener('click', function() {
-        if (currentOrder.length === 0) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Empty order',
-                text: 'Please add items to the order'
-            });
-            return;
-        }
+        document.getElementById('submitOrder').addEventListener('click', function () {
+            if (currentOrder.length === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Empty order',
+                    text: 'Please add items to the order'
+                });
+                return;
+            }
 
-        const total = currentOrder.reduce((sum, item) => sum + item.subtotal, 0);
-        const amount = parseFloat(document.getElementById('amountTendered').value || '0');
-        if (!Number.isFinite(amount) || amount < total) {
-            const msg = !Number.isFinite(amount) ?
-                'Please enter a valid amount.' :
-                `Insufficient funds. Total is ₱${total.toFixed(2)}.`;
-            Swal.fire({
-                icon: 'error',
-                title: 'Insufficient funds',
-                text: msg
-            });
-            return; // do NOT reset the order
-        }
+            const orderData = new FormData();
+            orderData.append('items', JSON.stringify(currentOrder.map(item => ({
+                product_id: item.product_id,
+                qty: item.qty,
+                price: item.price
+            }))));
+            orderData.append('notes', document.getElementById('orderNotes').value);
 
-        const orderData = new FormData();
-        orderData.append('items', JSON.stringify(currentOrder.map(item => ({
-            product_id: item.product_id,
-            qty: item.qty,
-            price: item.price
-        }))));
-        orderData.append('notes', document.getElementById('orderNotes').value);
-
-        fetch(`${API}?action=create_order`, {
+            fetch(`${API}?action=create_order`, {
                 method: 'POST',
                 body: orderData
             })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    currentOrder = [];
-                    updateOrderDisplay();
-                    document.getElementById('orderNotes').value = '';
-                    document.getElementById('amountTendered').value = '';
-                    loadTransactions();
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Order completed',
-                        timer: 1200,
-                        showConfirmButton: false
-                    });
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: data.message || 'Error creating order'
-                    });
-                }
-            });
-    });
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        currentOrder = [];
+                        updateOrderDisplay();
+                        document.getElementById('orderNotes').value = '';
+                        loadTransactions();
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Order completed',
+                            timer: 1200,
+                            showConfirmButton: false
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: data.message || 'Error creating order'
+                        });
+                    }
+                });
+        });
 
-    document.getElementById('filterReport').addEventListener('click', loadTransactions);
+        document.getElementById('filterReport').addEventListener('click', loadTransactions);
 
-    document.getElementById('generatePdf').addEventListener('click', function() {
-        const startDate = document.getElementById('startDate').value || new Date().toISOString().split('T')[0];
-        const endDate = document.getElementById('endDate').value || new Date().toISOString().split('T')[0];
-        window.location.href = `${API}?action=generate_pdf_report&start_date=${startDate}&end_date=${endDate}`;
-    });
+        document.getElementById('generatePdf').addEventListener('click', function () {
+            const startDate = document.getElementById('startDate').value || new Date().toISOString().split('T')[0];
+            const endDate = document.getElementById('endDate').value || new Date().toISOString().split('T')[0];
+
+            fetch(`${API}?action=generate_pdf_report&start_date=${startDate}&end_date=${endDate}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.success) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: data.message || 'Error generating report'
+                        });
+                        return;
+                    }
+
+                    const rows = (data.transactions || []).map(t => `
+                <tr>
+                    <td>${t.id}</td>
+                    <td>${new Date(t.date_added).toLocaleString()}</td>
+                    <td>${t.served_by_name || ''}</td>
+                    <td>₱${parseFloat(t.total_amount).toFixed(2)}</td>
+                    <td>${t.notes || ''}</td>
+                </tr>
+            `).join('');
+
+                    const html = `
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h4 class="mb-0">Transaction Report</h4>
+                        <small>${startDate} to ${endDate}</small>
+                    </div>
+                    <div><strong>Total: ₱${parseFloat(data.total || 0).toFixed(2)}</strong></div>
+                </div>
+                <table class="table table-sm table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 10%">Order ID</th>
+                            <th style="width: 22%">Date</th>
+                            <th style="width: 28%">Served By</th>
+                            <th style="width: 15%">Amount</th>
+                            <th style="width: 25%">Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows || `<tr><td colspan="5" class="text-center text-muted">No records found</td></tr>`}</tbody>
+                </table>
+            `;
+
+                    document.getElementById('pdfPreviewContent').innerHTML = html;
+                    const modal = new bootstrap.Modal(document.getElementById('pdfPreviewModal'));
+                    modal.show();
+                });
+        });
     </script>
 </body>
 

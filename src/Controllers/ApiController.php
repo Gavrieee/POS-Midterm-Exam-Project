@@ -25,11 +25,11 @@ class ApiController
         $password = $_POST['password'] ?? '';
 
         if (Auth::attempt($username, $password)) {
-            // optionally update last_login
+
             try {
                 $this->user->updateLastLogin(Auth::id());
             } catch (\Throwable $e) {
-                // ignore update failure
+
             }
             return ['success' => true];
         }
@@ -64,7 +64,7 @@ class ApiController
         }
 
         $userId = $_POST['user_id'] ?? 0;
-        // Convert "true"/"false" (or "1"/"0") to boolean
+
         $suspend = filter_var($_POST['suspend'] ?? 'true', FILTER_VALIDATE_BOOLEAN);
 
         if ($this->user->suspendUser($userId, $suspend)) {
@@ -194,26 +194,6 @@ class ApiController
                 return $carry + $item['total_amount'];
             }, 0);
 
-            // Commented out PDF generation until composer is fixed
-            /*
-            require_once __DIR__ . '/../../vendor/autoload.php';
-            $dompdf = new \Dompdf\Dompdf();
-
-            ob_start();
-            include __DIR__ . '/../../views/reports/transactions_pdf.php';
-            $html = ob_get_clean();
-
-            $dompdf->loadHtml($html);
-            $dompdf->setPaper('A4', 'portrait');
-            $dompdf->render();
-
-            header('Content-Type: application/pdf');
-            header('Content-Disposition: attachment; filename="transactions.pdf"');
-            echo $dompdf->output();
-            exit;
-            */
-
-            // Temporary: return JSON instead of PDF
             return [
                 'success' => true,
                 'message' => 'PDF generation is temporarily disabled. Here is the data:',

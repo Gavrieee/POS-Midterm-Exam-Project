@@ -26,7 +26,7 @@ class User
         $hash = password_hash($password, PASSWORD_DEFAULT);
         $stmt = $this->db->prepare("INSERT INTO users (username,password_hash,full_name,role) VALUES (?, ?, ?, 'admin')");
         $stmt->execute([$username, $hash, $fullName]);
-        // optionally log who created the account in audit_logs
+        // optionally log who created the account in audit_logs ????????
         return $this->db->lastInsertId();
     }
 
